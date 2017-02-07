@@ -6,31 +6,33 @@ var Promise = require('bluebird');
 
 
 var doRequest = function (options) {
+	//console.log("Building promise");
 	return new Promise(function(resolve, reject){
 		request(options,function(error, response, body){
-			//console.log(response.statusCode);
 			if(!error){
-				resolve()
+				console.log(body);
+				resolve();
 			}else{
-				reject(error)
+				console.log(response||error);
+				reject(error);
 			}
 		})
 	});
 }
 
 
-module.exports.doParallelRequest= function (url,method,number,body){
-
+module.exports.doParallelRequest = function (url,method,number,body){
 	var options = {
 			  uri: url,
 			  method: method,
 			  json: true,
-				body: body
+				body: body,
 			};
 
-	var asyncTasks = []
 
-		for (var i = 0; i < number; i++) {
+	var asyncTasks = [];
+
+		for (var i = 0; i <= number; i++) {
 				asyncTasks.push(doRequest(options));
 			}
 
