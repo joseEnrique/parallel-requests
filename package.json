@@ -1,16 +1,25 @@
 {
-  "name": "test-request",
-  "version": "1.0.0",
-  "description": "testing http",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "async": "^2.1.4",
-    "bluebird": "^3.4.7",
-    "request": "^2.79.0"
-  }
+    "name": "parallel-requests",
+    "version": "1.0.0",
+    "description": "testing endpoints via http requests",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "bluebird": "^3.4.7",
+        "request": "^2.79.0",
+        "winston": "^2.3.1"
+    },
+    "devDependencies": {},
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/joseEnrique/parallel-requests.git"
+    },
+    "bugs": {
+        "url": "https://github.com/joseEnrique/parallel-requests/issues"
+    },
+    "homepage": "https://github.com/joseEnrique/parallel-requests#readme"
 }
