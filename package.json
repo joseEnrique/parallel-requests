@@ -1,6 +1,6 @@
 {
     "name": "parallel-requests",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "testing endpoints via http requests",
     "main": "index.js",
     "scripts": {

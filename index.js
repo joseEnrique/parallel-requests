@@ -17,9 +17,8 @@ var doRequest = function(options) {
 
                 resolve(success);
             } else {
-                //winston.info(response || error)
-                console.log(response || error);
-                reject(error);
+                success = false;
+                resolve(success);
             }
         })
     });
@@ -27,13 +26,14 @@ var doRequest = function(options) {
 
 
 module.exports.doParallelRequest = function(url, method, number, body) {
+    var options;
     if (method.toUpperCase() == "GET") {
-        var options = {
+        options = {
             uri: url,
             method: method,
         };
     } else {
-        var options = {
+        options = {
             uri: url,
             method: method,
             json: true,
