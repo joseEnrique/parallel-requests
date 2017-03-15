@@ -5,8 +5,7 @@ node_js:
 
 sudo: required
 
-services:
-  - docker
+
 
 before_script:
   - npm install grunt-cli -g
