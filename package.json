@@ -43,6 +43,6 @@
         "type": "git",
         "url": "git+https://github.com/joseEnrique/parallel-requests.git",
         "github": "https://github.com/joseEnrique/parallel-requests"
-    },
+    }
 
 }
