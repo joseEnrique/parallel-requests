@@ -1,0 +1,52 @@
+---
+testId: validation14
+type: interval
+url: http://www.google.es
+tenants:
+  - id: t1
+    intervals:
+      - 8
+      - 0
+      - 5
+      - 7
+    duration: 150
+  - id: t2
+    intervals:
+      - 6
+      - 4
+      - 0
+      - 1
+      - 8
+      - 1
+    duration: 100
+  - id: t3
+    intervals:
+      - 1
+      - 8
+      - 8
+      - 1
+      - 4
+    duration: 120
+  - id: t4
+    intervals:
+      - 3
+      - 0
+      - 8
+    duration: 200
+  - id: t5
+    intervals:
+      - 1
+      - 8
+      - 1
+      - 4
+    duration: 150
+initial: '2017-03-14T10:58:30.845Z'
+end: '2017-03-14T12:58:30.845Z'
+executed: false
+---
+testId: validation13
+type: long
+url : http://systerminal.com
+duration: 3 #seconds
+count: 5
+method: GET
