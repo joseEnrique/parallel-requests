@@ -22,16 +22,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 var request = require('request');
 var Promise = require('bluebird');
-var childProcess = require('child_process');
-var logger = require('./logger/logger');
+var config = require('./configurations/config.js');
 var fs = require('fs');
 var path = require('path');
 var jsyaml = require('js-yaml');
 var cluster = require('cluster');
-var singleDoc;
-var total = 0;
-var successful = 0;
-var error = 0;
+var moment = require('moment');
+
+
 module.exports = {
     doParallelRequest: _doParallelRequest,
     doTestParallelFromfile: _doTestParallelFromfile
@@ -82,10 +80,7 @@ function _doParallelRequest(url, method, number, body) {
 
     for (var i = 0; i < number; i++) {
         asyncTasks.push(doRequest(options));
-
     }
-
-
     return Promise.all(asyncTasks);
 
 
@@ -100,7 +95,7 @@ function _doTestParallelFromfile(uri) {
         if (!uri) {
             throw new Error("Parameter URI is required");
         } else {
-            configString = fs.readFileSync(path.join(__dirname, uri), "utf8");
+            configString = fs.readFileSync(uri, "utf8");
         }
         //var newConfigurations = jsyaml.safeLoadAll(configString);
         var newConfigurations = [];
@@ -111,15 +106,13 @@ function _doTestParallelFromfile(uri) {
 
         var threads = newConfigurations.length;
         for (var i = 0; i < threads; i++) {
-            singleDoc = newConfigurations[i];
+            let singleDoc = newConfigurations[i];
             _doc(singleDoc);
-
             cluster.fork();
         }
 
     } else {
         // This gets executed if the process is a worker
-        console.log('I am the thread: ' + process.pid);
         process.exit(1);
     }
 
@@ -134,21 +127,38 @@ function _doc(testConfiguration) {
     var type = testConfiguration.type;
 
     if (type == "interval") {
-        console.log("prueba");
+        for (var element in testConfiguration.tenants) {
+            let method = testConfiguration.tenants[element].method ? testConfiguration.tenants[element].method : testConfiguration.method;
+            let arrayThrougt = testConfiguration.tenants[element].intervals;
+            let duration = testConfiguration.tenants[element].duration;
+            let body = testConfiguration.tenants[element].body ? JSON.parse(testConfiguration.tenants[element].body) : undefined;
+
+            execRequestsInterval(testConfiguration.url, method, arrayThrougt, duration, testConfiguration.tenants[element].id, testConfiguration.testId, body).then(function(success) {
+                success.url = testConfiguration.url;
+                success.method = method;
+                success.idTenant = testConfiguration.tenants[element].id;
+                success.idTest = testConfiguration.testId;
+                writeLog(success);
+                console.log(success);
+                return success;
+
+            });
+
+        }
+
     } else {
 
         execRequests(testConfiguration).then(function(success) {
-
+            success.url = testConfiguration.url;
+            success.method = testConfiguration.method;
+            success.idTest = testConfiguration.testId;
             console.log(success);
+            writeLog(success);
+
 
         });
 
-        //var url = 'http://' + testConfiguration.service.endpoint + ':' + testConfiguration.service.exposePort + request.path + '?user=' + tenant.id;
-        //var cmd = 'node ' + tenantScript + ' ' + JSON.stringify(tenant.intervals) + ' ' + tenant.duration + ' ' + request.operation + ' ' + url + ' ' + request.body;
-        //logger.debug('setting up tenant: ' + tenant.id + ' \nExecuting cmd: ' + cmd);
 
-
-        // resolve();
     }
 }
 
@@ -158,43 +168,47 @@ function _doc(testConfiguration) {
 var execRequests = function(testConfiguration) {
     return new Promise(function(resolve) {
 
-        var total = 0;
-        var success = 0;
-        var error = 0;
-        var counter_timer = 0;
-        var request_ack = 0;
+        let total = 0;
+        let successful = 0;
+        let error = 0;
+        let counter_timer = 0;
+        let request_ack = 0;
+        let start_date = moment();
+        let interval = setInterval(function() {
 
-        var interval = setInterval(function() {
-
-            console.log(new Date().toISOString());
-
-            if (counter_timer == testConfiguration.duration) {
+            if (counter_timer == testConfiguration.duration - 1) {
                 clearInterval(interval);
             }
 
             _doParallelRequest(testConfiguration.url, testConfiguration.method, testConfiguration.count).then(function(success) {
                 success.forEach(function(element) {
-
                     if (element) {
-                        success++;
+                        successful++;
                     } else {
                         error++;
                     }
 
                     total++;
-                    console.log("logisito" + total);
 
                 });
 
                 request_ack++;
-
-                if (request_ack == testConfiguration.duration + 1) {
-                    console.log("total: " + total);
-                    resolve(total);
+                if (request_ack == testConfiguration.duration) {
+                    let finish_date = moment();
+                    let resobject = {};
+                    resobject.totalRequest = total;
+                    resobject.success = successful;
+                    resobject.error = error;
+                    resobject.totalStack = request_ack;
+                    resobject.startTime = start_date.toISOString();
+                    resobject.finishTime = finish_date.toISOString();
+                    resobject.lastedFor = finish_date - start_date + " ms";
+                    resolve(resobject);
                 }
 
             });
             counter_timer++;
+
 
         }, 1000); // setInterval
 
@@ -204,45 +218,73 @@ var execRequests = function(testConfiguration) {
 
 
 
-/*
-var execRequestsInterval = function() {
-    var counter_timer = 0;
-    var currentindex = 0;
-    var interval = setInterval(function() {
 
-        if (counter_timer >= time) {
-            //restart counter-time
-            counter_timer = 0;
-            //logger.info("Next resquests for element in position " + currentindex);
-            currentindex++;
+var execRequestsInterval = function(uri, method, array, duration, tenantId, testId, body) {
+    return new Promise(function(resolve) {
+        let total = 0;
+        let successful = 0;
+        let error = 0;
+        let counter_timer = 0;
+        let currentindex = 0;
+        let request_ack = 0;
+        let start_date = moment();
+        let interval = setInterval(function() {
+            if (counter_timer == duration) {
+                //restart counter-time
+                counter_timer = 0;
+                //logger.info("Next resquests for element in position " + currentindex);
+                currentindex++;
 
-            if (currentindex >= arrayRequest.length) {
-                var objectResult = {};
-                objectResult.total = total;
-                objectResult.success = successful;
-                objectResult.error = error;
-
-                console.log(JSON.stringify(objectResult));
-                clearInterval(interval);
-            }
-        }
-
-        requestpall(uri, method, arrayRequest[currentindex], body).then(function(success) {
-
-            success.forEach(function(element) {
-                if (element) {
-                    successful++;
-                } else {
-                    error++;
+                if (currentindex == array.length) {
+                    clearInterval(interval);
                 }
-                total++;
+            }
+            _doParallelRequest(uri, method, array[currentindex], body).then(function(success) {
+
+                success.forEach(function(element) {
+                    if (element) {
+                        successful++;
+                    } else {
+                        error++;
+                    }
+                    total++;
+
+                });
+
+
+                if (request_ack == array.length * duration) {
+                    let finish_date = moment();
+                    let resobject = {};
+                    resobject.totalRequest = total;
+                    resobject.success = successful;
+                    resobject.error = error;
+                    resobject.totalStack = request_ack;
+                    resobject.startTime = start_date.toISOString();
+                    resobject.finishTime = finish_date.toISOString();
+                    resobject.lastedFor = finish_date - start_date + " ms";
+
+                    resolve(resobject);
+                }
+
+                request_ack++;
+
 
             });
 
+            counter_timer++;
+        }, 1000);
 
-        });
 
-        counter_timer++;
-    }, 1000);
+    });
+
+
+
 };
-*/
+
+function writeLog(object) {
+    fs.appendFile(config.logrequest, JSON.stringify(object) + "\r\n", function(err) {
+        if (err) {
+            return console.log(err);
+        }
+    });
+}
