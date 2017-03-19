@@ -1,5 +1,5 @@
 /*!
-parallel-requests 2.0.1, built on: 2017-03-15
+parallel-requests 2.1.0, built on: 2017-03-20
 Copyright (C) 2017 Jose Enrique Ruiz Navarro
 http://www.isa.us.es/
 https://github.com/joseEnrique/parallel-requests
@@ -24,15 +24,14 @@ var request = require('request');
 var Promise = require('bluebird');
 var config = require('./configurations/config.js');
 var fs = require('fs');
-var path = require('path');
 var jsyaml = require('js-yaml');
-var cluster = require('cluster');
+//var cluster = require('cluster');
 var moment = require('moment');
 
 
 module.exports = {
     doParallelRequest: _doParallelRequest,
-    doTestParallelFromfile: _doTestParallelFromfile
+    doParallelRequestFromfile: _doParallelRequestFromfile
 };
 
 
@@ -59,7 +58,7 @@ var doRequest = function(options) {
 };
 
 
-function _doParallelRequest(url, method, number, body) {
+function _promisesRequests(url, method, number, body) {
     var options;
     if (method.toUpperCase() == "GET") {
         options = {
@@ -67,6 +66,7 @@ function _doParallelRequest(url, method, number, body) {
             method: method,
         };
     } else {
+        body = body ? JSON.parse(body): undefined;
         options = {
             uri: url,
             method: method,
@@ -87,34 +87,108 @@ function _doParallelRequest(url, method, number, body) {
 }
 
 
-function _doTestParallelFromfile(uri) {
+function _doParallelRequest(url,method,count,duration,body){
 
-    if (cluster.isMaster) {
+return new Promise(function(resolve){
+  var promiseRequest =  new Promise(function(resolve) {
 
-        var configString;
-        if (!uri) {
-            throw new Error("Parameter URI is required");
-        } else {
-            configString = fs.readFileSync(uri, "utf8");
+      let total = 0;
+      let successful = 0;
+      let error = 0;
+      let counter_timer = 0;
+      let request_ack = 0;
+      let start_date = moment();
+      let interval = setInterval(function() {
+          if (counter_timer == duration - 1) {
+              clearInterval(interval);
+          }
+
+          _promisesRequests(url,method,count,body).then(function(success) {
+              success.forEach(function(element) {
+                  if (element) {
+                      successful++;
+                  } else {
+                      error++;
+                  }
+
+                  total++;
+
+              });
+
+              request_ack++;
+              if (request_ack == duration) {
+                  let finish_date = moment();
+                  let resobject = {};
+                  resobject.totalRequest = total;
+                  resobject.success = successful;
+                  resobject.error = error;
+                  resobject.totalStack = request_ack;
+                  resobject.startTime = start_date.toISOString();
+                  resobject.finishTime = finish_date.toISOString();
+                  resobject.lastedFor = finish_date - start_date + " ms";
+                  resolve(resobject);
+              }
+
+          });
+          counter_timer++;
+
+
+      }, 1000); // setInterval
+
+  });
+
+  promiseRequest.then(function(success){
+    success.url = url;
+    success.method = method;
+    writeLog(success);
+    console.log(success);
+
+    resolve(success);
+
+
+
+  });
+  });
+}
+
+
+
+function _doParallelRequestFromfile(uri) {
+return new Promise(function(resolve){
+  var configString;
+  if (!uri) {
+      throw new Error("Parameter URI is required");
+  } else {
+      configString = fs.readFileSync(uri, "utf8");
+  }
+  //var newConfigurations = jsyaml.safeLoadAll(configString);
+  var newConfigurations = [];
+
+  jsyaml.safeLoadAll(configString, function(doc) {
+      newConfigurations.push(doc);
+  });
+
+  var configs = newConfigurations.length;
+  var executed = 0;
+  var arrayResults = [];
+  for (var i = 0; i < configs; i++) {
+      let singleDoc = newConfigurations[i];
+      _doc(singleDoc).then(function(success){
+        executed++;
+        arrayResults.push(success);
+        if (executed == configs){
+          resolve(arrayResults);
         }
-        //var newConfigurations = jsyaml.safeLoadAll(configString);
-        var newConfigurations = [];
 
-        jsyaml.safeLoadAll(configString, function(doc) {
-            newConfigurations.push(doc);
-        });
+      });
+      //cluster.fork();
+  }
 
-        var threads = newConfigurations.length;
-        for (var i = 0; i < threads; i++) {
-            let singleDoc = newConfigurations[i];
-            _doc(singleDoc);
-            cluster.fork();
-        }
 
-    } else {
-        // This gets executed if the process is a worker
-        process.exit(1);
-    }
+
+});
+
+
 
 }
 
@@ -124,9 +198,14 @@ function _doTestParallelFromfile(uri) {
 
 
 function _doc(testConfiguration) {
+  return new Promise(function(resolve){
     var type = testConfiguration.type;
 
     if (type == "interval") {
+        let numberOftenants = testConfiguration.tenants.length;
+        let executed = 0;
+        let arrayOfResult = [];
+
         for (var element in testConfiguration.tenants) {
             let method = testConfiguration.tenants[element].method ? testConfiguration.tenants[element].method : testConfiguration.method;
             let arrayThrougt = testConfiguration.tenants[element].intervals;
@@ -139,8 +218,13 @@ function _doc(testConfiguration) {
                 success.idTenant = testConfiguration.tenants[element].id;
                 success.idTest = testConfiguration.testId;
                 writeLog(success);
+                arrayOfResult.push(success);
+                executed++;
                 console.log(success);
-                return success;
+                if(executed==numberOftenants){
+                  resolve(arrayOfResult);
+
+                }
 
             });
 
@@ -154,12 +238,16 @@ function _doc(testConfiguration) {
             success.idTest = testConfiguration.testId;
             console.log(success);
             writeLog(success);
+            resolve(success);
 
 
         });
 
 
     }
+
+  });
+
 }
 
 
@@ -180,7 +268,7 @@ var execRequests = function(testConfiguration) {
                 clearInterval(interval);
             }
 
-            _doParallelRequest(testConfiguration.url, testConfiguration.method, testConfiguration.count).then(function(success) {
+            _promisesRequests(testConfiguration.url, testConfiguration.method, testConfiguration.count, testConfiguration.body).then(function(success) {
                 success.forEach(function(element) {
                     if (element) {
                         successful++;
@@ -239,7 +327,7 @@ var execRequestsInterval = function(uri, method, array, duration, tenantId, test
                     clearInterval(interval);
                 }
             }
-            _doParallelRequest(uri, method, array[currentindex], body).then(function(success) {
+            _promisesRequests(uri, method, array[currentindex], body).then(function(success) {
 
                 success.forEach(function(element) {
                     if (element) {

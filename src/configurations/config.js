@@ -1,5 +1,5 @@
 /*!
-parallel-requests 2.0.1, built on: 2017-03-15
+parallel-requests 2.1.0, built on: 2017-03-20
 Copyright (C) 2017 Jose Enrique Ruiz Navarro
 http://www.isa.us.es/
 https://github.com/joseEnrique/parallel-requests

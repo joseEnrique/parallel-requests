@@ -8,34 +8,44 @@ tenants:
     method: POST
     intervals: #count
       - 8
+      - 0
       - 5
-    duration: 1
+      - 7
+    duration: 2
   - id: t2
     intervals:
       - 6
       - 4
-    duration: 1
+      - 0
+      - 1
+      - 8
+      - 1
+    duration: 2
   - id: t3
     intervals:
       - 1
       - 8
-    duration: 1
+      - 8
+      - 1
+      - 4
+    duration: 2
   - id: t4
     intervals:
       - 3
-      - 3
-    duration: 1
+      - 0
+      - 8
+    duration: 2
 ---
 testId: validation13
 type: long
 url : https://twitter.com/
 duration: 3 #seconds
-count: 2
+count: 5
 method: GET
 ---
 testId: validation16
 type: long
 url : https://google.es
-duration: 1 #seconds
-count: 3
+duration: 10 #seconds
+count: 10
 method: GET
