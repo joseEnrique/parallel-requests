@@ -4,4 +4,11 @@
 ```bash
 npm install parallel-requests
 ```
+
+
+## 2. Install the command
+```bash
+npm install parallel-requests -g
+```
+
 ## Latest release
