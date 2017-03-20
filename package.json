@@ -1,6 +1,6 @@
 {
   "name": "parallel-requests",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "description": "Testing endpoints via http requests",
   "homepage": "https://github.com/joseEnrique/parallel-requests",
   "main": "index.js",
@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "bluebird": "^3.4.7",
-    "cluster": "^0.7.7",
     "fs": "0.0.1-security",
     "js-yaml": "^3.8.2",
     "moment": "^2.17.1",
