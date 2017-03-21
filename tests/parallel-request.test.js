@@ -1,5 +1,5 @@
 /*!
-parallel-requests 2.1.0, built on: 2017-03-20
+parallel-requests 2.2.0, built on: 2017-03-21
 Copyright (C) 2017 Jose Enrique Ruiz Navarro
 http://www.isa.us.es/
 https://github.com/joseEnrique/parallel-requests
@@ -30,39 +30,53 @@ var lib = require('../src');
 describe('GET google', function() {
     this.timeout(2000);
     it('Execute', (done) => {
-        lib.doParallelRequest("https://www.google.es/", "GET", 2, 1).then(function(success){
-          expect(success.totalRequest).to.be.equal(2);
-          done();
+        lib.doParallelRequestWithDuration("https://www.google.es/", "GET", 2, 1).then(function(success) {
+            expect(success.totalRequest).to.be.equal(2);
+            done();
         });
     });
 });
 describe('POST failed ', function() {
     this.timeout(2000);
     it('Execute', (done) => {
-        lib.doParallelRequest("https://www.google.es/", "POST", 2, 1).then(function(success){
-          expect(success.error).to.be.equal(2);
-          done();
+        lib.doParallelRequestWithDuration("https://www.google.es/", "POST", 2, 1).then(function(success) {
+            expect(success.error).to.be.equal(2);
+            done();
         });
     });
 });
 
-describe('POST successful ', function() {
+describe('POST successful', function() {
     this.timeout(4000);
     it('Execute', (done) => {
-        lib.doParallelRequest("https://jsonplaceholder.typicode.com/posts", "POST", 2, 1,"{	\"systerminal\": 1}").then(function(success){
-          expect(success.success).to.be.equal(2);
-          done();
+        lib.doParallelRequestWithDuration("https://jsonplaceholder.typicode.com/posts", "POST", 2, 1, "{	\"systerminal\": 1}").then(function(success) {
+            expect(success.success).to.be.equal(2);
+            done();
         });
     });
 });
+
+
+describe('GET only ONE successful', function() {
+    this.timeout(4000);
+    it('Execute', (done) => {
+        lib.doOneStackOfRequest("http://systerminal.com", "GET", 2).then(function(success) {
+            console.log(success);
+            expect(success.success).to.be.equal(2);
+            done();
+        });
+    });
+});
+
+
 
 describe('By config file, 3 test successful', function() {
     this.timeout(17000);
     it('Execute', (done) => {
-        lib.doParallelRequestFromfile('./tests/config-test.yaml').then(function(success){
-          console.log(success);
-          expect(success.length).to.be.equal(3);
-          done();
+        lib.doParallelRequestFromfile('./tests/config-test.yaml').then(function(success) {
+            console.log(success);
+            expect(success.length).to.be.equal(3);
+            done();
 
         });
 

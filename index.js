@@ -1,7 +1,10 @@
+"use strict";
 var parallel_requests = require("./src");
 
 
 module.exports = {
-    doParallelRequest: parallel_requests.doParallelRequest,
-    doParallelRequestFromfile: parallel_requests.doParallelRequestFromfile
+    doParallelRequestWithDuration: parallel_requests.doParallelRequestWithDuration,
+    doParallelRequestFromfile: parallel_requests.doParallelRequestFromfile,
+    doOneStackOfRequest: parallel_requests.doOneStackOfRequest,
+    doRequests: parallel_requests.doRequests
 };

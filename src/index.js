@@ -1,5 +1,5 @@
 /*!
-parallel-requests 2.1.0, built on: 2017-03-20
+parallel-requests 2.2.0, built on: 2017-03-21
 Copyright (C) 2017 Jose Enrique Ruiz Navarro
 http://www.isa.us.es/
 https://github.com/joseEnrique/parallel-requests
@@ -30,8 +30,10 @@ var moment = require('moment');
 
 
 module.exports = {
-    doParallelRequest: _doParallelRequest,
-    doParallelRequestFromfile: _doParallelRequestFromfile
+    doParallelRequestWithDuration: _doParallelRequestWithDuration,
+    doParallelRequestFromfile: _doParallelRequestFromfile,
+    doOneStackOfRequest: _doOneStackOfRequest,
+    doRequests: _doRequests
 };
 
 
@@ -60,13 +62,18 @@ var doRequest = function(options) {
 
 function _promisesRequests(url, method, number, body) {
     var options;
+
     if (method.toUpperCase() == "GET") {
         options = {
             uri: url,
             method: method,
         };
     } else {
-        body = body ? JSON.parse(body): undefined;
+        if (body) {
+            if (typeof(body) == "string") {
+                body = JSON.parse(body);
+            }
+        }
         options = {
             uri: url,
             method: method,
@@ -87,106 +94,179 @@ function _promisesRequests(url, method, number, body) {
 }
 
 
-function _doParallelRequest(url,method,count,duration,body){
+function _doRequests(url, method, count, body) {
+    setInterval(function() {
+        let total = 0;
+        let successful = 0;
+        let error = 0;
+        let start_date = moment();
+        _promisesRequests(url, method, count, body).then(function(success) {
+            success.forEach(function(element) {
+                if (element) {
+                    successful++;
+                } else {
+                    error++;
+                }
 
-return new Promise(function(resolve){
-  var promiseRequest =  new Promise(function(resolve) {
+                total++;
 
-      let total = 0;
-      let successful = 0;
-      let error = 0;
-      let counter_timer = 0;
-      let request_ack = 0;
-      let start_date = moment();
-      let interval = setInterval(function() {
-          if (counter_timer == duration - 1) {
-              clearInterval(interval);
-          }
+            });
 
-          _promisesRequests(url,method,count,body).then(function(success) {
-              success.forEach(function(element) {
-                  if (element) {
-                      successful++;
-                  } else {
-                      error++;
-                  }
-
-                  total++;
-
-              });
-
-              request_ack++;
-              if (request_ack == duration) {
-                  let finish_date = moment();
-                  let resobject = {};
-                  resobject.totalRequest = total;
-                  resobject.success = successful;
-                  resobject.error = error;
-                  resobject.totalStack = request_ack;
-                  resobject.startTime = start_date.toISOString();
-                  resobject.finishTime = finish_date.toISOString();
-                  resobject.lastedFor = finish_date - start_date + " ms";
-                  resolve(resobject);
-              }
-
-          });
-          counter_timer++;
+            let finish_date = moment();
+            let resobject = {};
+            resobject.totalRequest = total;
+            resobject.success = successful;
+            resobject.error = error;
+            resobject.startTime = start_date.toISOString();
+            resobject.finishTime = finish_date.toISOString();
+            resobject.lastedFor = finish_date - start_date + " ms";
+            console.log(resobject);
 
 
-      }, 1000); // setInterval
+        });
 
-  });
+    }, 1000); // setInterv0al
 
-  promiseRequest.then(function(success){
-    success.url = url;
-    success.method = method;
-    writeLog(success);
-    console.log(success);
-
-    resolve(success);
+}
 
 
+function _doOneStackOfRequest(url, method, count, body) {
+    return new Promise(function(resolve) {
+        let total = 0;
+        let successful = 0;
+        let error = 0;
+        let start_date = moment();
+        _promisesRequests(url, method, count, body).then(function(success) {
+            success.forEach(function(element) {
+                if (element) {
+                    successful++;
+                } else {
+                    error++;
+                }
 
-  });
-  });
+                total++;
+
+            });
+            let finish_date = moment();
+            let resobject = {};
+            resobject.totalRequest = total;
+            resobject.success = successful;
+            resobject.error = error;
+            resobject.startTime = start_date.toISOString();
+            resobject.finishTime = finish_date.toISOString();
+            resobject.lastedFor = finish_date - start_date + " ms";
+            console.log(resobject);
+            resolve(resobject);
+
+        });
+
+
+    });
+
+
+}
+
+
+function _doParallelRequestWithDuration(url, method, count, duration, body) {
+
+    return new Promise(function(resolve) {
+        var promiseRequest = new Promise(function(resolve) {
+
+            let total = 0;
+            let successful = 0;
+            let error = 0;
+            let counter_timer = 0;
+            let request_ack = 0;
+            let start_date = moment();
+            let interval = setInterval(function() {
+                if (counter_timer == duration - 1) {
+                    clearInterval(interval);
+                }
+
+                _promisesRequests(url, method, count, body).then(function(success) {
+                    success.forEach(function(element) {
+                        if (element) {
+                            successful++;
+                        } else {
+                            error++;
+                        }
+
+                        total++;
+
+                    });
+
+                    request_ack++;
+                    if (request_ack == duration) {
+                        let finish_date = moment();
+                        let resobject = {};
+                        resobject.totalRequest = total;
+                        resobject.success = successful;
+                        resobject.error = error;
+                        resobject.totalStack = request_ack;
+                        resobject.startTime = start_date.toISOString();
+                        resobject.finishTime = finish_date.toISOString();
+                        resobject.lastedFor = finish_date - start_date + " ms";
+                        resolve(resobject);
+                    }
+
+                });
+                counter_timer++;
+
+
+            }, 1000); // setInterval
+
+        });
+
+        promiseRequest.then(function(success) {
+            success.url = url;
+            success.method = method;
+            writeLog(success);
+            console.log(success);
+
+            resolve(success);
+
+
+
+        });
+    });
 }
 
 
 
 function _doParallelRequestFromfile(uri) {
-return new Promise(function(resolve){
-  var configString;
-  if (!uri) {
-      throw new Error("Parameter URI is required");
-  } else {
-      configString = fs.readFileSync(uri, "utf8");
-  }
-  //var newConfigurations = jsyaml.safeLoadAll(configString);
-  var newConfigurations = [];
+    return new Promise(function(resolve) {
+        var configString;
+        if (!uri) {
+            throw new Error("Parameter URI is required");
+        } else {
+            configString = fs.readFileSync(uri, "utf8");
+        }
+        //var newConfigurations = jsyaml.safeLoadAll(configString);
+        var newConfigurations = [];
 
-  jsyaml.safeLoadAll(configString, function(doc) {
-      newConfigurations.push(doc);
-  });
+        jsyaml.safeLoadAll(configString, function(doc) {
+            newConfigurations.push(doc);
+        });
 
-  var configs = newConfigurations.length;
-  var executed = 0;
-  var arrayResults = [];
-  for (var i = 0; i < configs; i++) {
-      let singleDoc = newConfigurations[i];
-      _doc(singleDoc).then(function(success){
-        executed++;
-        arrayResults.push(success);
-        if (executed == configs){
-          resolve(arrayResults);
+        var configs = newConfigurations.length;
+        var executed = 0;
+        var arrayResults = [];
+        for (var i = 0; i < configs; i++) {
+            let singleDoc = newConfigurations[i];
+            _doc(singleDoc).then(function(success) {
+                executed++;
+                arrayResults.push(success);
+                if (executed == configs) {
+                    resolve(arrayResults);
+                }
+
+            });
+            //cluster.fork();
         }
 
-      });
-      //cluster.fork();
-  }
 
 
-
-});
+    });
 
 
 
@@ -198,55 +278,55 @@ return new Promise(function(resolve){
 
 
 function _doc(testConfiguration) {
-  return new Promise(function(resolve){
-    var type = testConfiguration.type;
+    return new Promise(function(resolve) {
+        var type = testConfiguration.type;
 
-    if (type == "interval") {
-        let numberOftenants = testConfiguration.tenants.length;
-        let executed = 0;
-        let arrayOfResult = [];
+        if (type == "interval") {
+            let numberOftenants = testConfiguration.tenants.length;
+            let executed = 0;
+            let arrayOfResult = [];
 
-        for (var element in testConfiguration.tenants) {
-            let method = testConfiguration.tenants[element].method ? testConfiguration.tenants[element].method : testConfiguration.method;
-            let arrayThrougt = testConfiguration.tenants[element].intervals;
-            let duration = testConfiguration.tenants[element].duration;
-            let body = testConfiguration.tenants[element].body ? JSON.parse(testConfiguration.tenants[element].body) : undefined;
+            for (var element in testConfiguration.tenants) {
+                let method = testConfiguration.tenants[element].method ? testConfiguration.tenants[element].method : testConfiguration.method;
+                let arrayThrougt = testConfiguration.tenants[element].intervals;
+                let duration = testConfiguration.tenants[element].duration;
+                let body = testConfiguration.tenants[element].body ? JSON.parse(testConfiguration.tenants[element].body) : undefined;
 
-            execRequestsInterval(testConfiguration.url, method, arrayThrougt, duration, testConfiguration.tenants[element].id, testConfiguration.testId, body).then(function(success) {
+                execRequestsInterval(testConfiguration.url, method, arrayThrougt, duration, testConfiguration.tenants[element].id, testConfiguration.testId, body).then(function(success) {
+                    success.url = testConfiguration.url;
+                    success.method = method;
+                    success.idTenant = testConfiguration.tenants[element].id;
+                    success.idTest = testConfiguration.testId;
+                    writeLog(success);
+                    arrayOfResult.push(success);
+                    executed++;
+                    console.log(success);
+                    if (executed == numberOftenants) {
+                        resolve(arrayOfResult);
+
+                    }
+
+                });
+
+            }
+
+        } else {
+
+            execRequests(testConfiguration).then(function(success) {
                 success.url = testConfiguration.url;
-                success.method = method;
-                success.idTenant = testConfiguration.tenants[element].id;
+                success.method = testConfiguration.method;
                 success.idTest = testConfiguration.testId;
-                writeLog(success);
-                arrayOfResult.push(success);
-                executed++;
                 console.log(success);
-                if(executed==numberOftenants){
-                  resolve(arrayOfResult);
+                writeLog(success);
+                resolve(success);
 
-                }
 
             });
 
+
         }
 
-    } else {
-
-        execRequests(testConfiguration).then(function(success) {
-            success.url = testConfiguration.url;
-            success.method = testConfiguration.method;
-            success.idTest = testConfiguration.testId;
-            console.log(success);
-            writeLog(success);
-            resolve(success);
-
-
-        });
-
-
-    }
-
-  });
+    });
 
 }
 
