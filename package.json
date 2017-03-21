@@ -1,6 +1,6 @@
 {
   "name": "parallel-requests",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Testing endpoints via http requests",
   "homepage": "https://github.com/joseEnrique/parallel-requests",
   "main": "index.js",
